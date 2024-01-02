@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Logoot } from '../../logoot';
+import './Editor.scss';
 
-const Editor = () => {
-  const logoot = useMemo(() => new Logoot('haiyen'), []);
+export const Editor = () => {
+  const logoot = useMemo(() => new Logoot('haiyen', localStorage.getItem('logoot')), []);
   const [caretStartPos, setCaretStartPos] = useState(0);
   const [caretEndPos, setCaretEndPos] = useState(0);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(logoot.getValue());
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -54,12 +55,13 @@ const Editor = () => {
             remove(selectionStart, selectionEnd, true);
           }
           if (key.toLowerCase() === 'v') {
-            const copiedText = await navigator.clipboard.readText();
+            const copiedText = (await navigator.clipboard.readText()).replaceAll('\r', '');
             insert(copiedText, selectionStart, selectionEnd, true);
           }
         }
       }
     }
+    localStorage.setItem('logoot', logoot.getState());
   };
 
   const insert = (value: string, selectionStart: number, selectionEnd: number, needUpdateText = false) => {
@@ -84,14 +86,15 @@ const Editor = () => {
   };
 
   return (
-    <textarea
-      style={{ width: '90%', height: '90%' }}
-      ref={textAreaRef}
-      value={text}
-      onKeyDown={handleKeyDown}
-      onChange={handleChange}
-    />
+    <div className="editor">
+      <div className="editor__line-numbers"></div>
+      <textarea
+        value={text}
+        ref={textAreaRef}
+        className="editor__input"
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+      />
+    </div>
   );
 };
-
-export default Editor;

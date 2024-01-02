@@ -22,6 +22,8 @@ export class Logoot {
     this.root.setEmpty(false);
     this.root.addChild(new LogootNode(new Identifier(INT_MIN, '', 0)));
     this.root.addChild(new LogootNode(new Identifier(INT_MAX, '', 0)));
+
+    if (state) this.setState(state);
   }
 
   insert(value: string, index: number) {
@@ -115,5 +117,35 @@ export class Logoot {
 
   setValue(value: string) {
     this.replaceRange(value, 0, this.length);
+  }
+
+  getState() {
+    return JSON.stringify(
+      {
+        root: this.root,
+        deleteQueue: this.deleteQueue
+      },
+      (key, value) => (key === 'parent' ? undefined : value)
+    );
+  }
+
+  private parseId(id: any) {
+    return new Identifier(id.int, id.site, id.clock);
+  }
+
+  setState(state: string) {
+    const parsed = JSON.parse(state);
+
+    const parseNode = (n: LogootNode<Identifier>, parent: LogootNode<Identifier> | null) => {
+      const node = new LogootNode(this.parseId(n.id), n.value);
+      node.parent = parent;
+      node.children = n.children.map((child) => parseNode(child, node));
+      node.size = n.size;
+      node.empty = n.empty;
+      return node;
+    };
+
+    this.root = parseNode(parsed.root, null);
+    this.deleteQueue = parsed.deleteQueue;
   }
 }

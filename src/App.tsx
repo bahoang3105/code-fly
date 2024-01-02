@@ -1,12 +1,10 @@
 import './App.scss';
-import Editor from './components/Editor/Editor';
+import { WriteCode } from './components/WriteCode';
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <Editor />
-      </header>
+      <WriteCode />
     </div>
   );
 }
