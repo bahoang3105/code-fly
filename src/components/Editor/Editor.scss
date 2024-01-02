@@ -1,0 +1,10 @@
+.editor {
+  height: 100%;
+  &__input {
+    resize: none;
+    height: 100%;
+    width: 100%;
+    padding-right: 40px;
+    white-space: nowrap;
+  }
+}

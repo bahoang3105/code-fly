@@ -1,0 +1,8 @@
+.write-code {
+  height: 100%;
+  width: 50%;
+  &__editor {
+    height: calc(100% - 40px);
+    width: 100%;
+  }
+}
