@@ -1,10 +1,16 @@
+import { Route, Routes } from 'react-router-dom';
 import './App.scss';
-import { WriteCode } from './components/WriteCode';
+import { ROUTE_URL } from './constrains/router';
+import HomePage from './pages/HomePage';
+import CodeRoom from './pages/CodeRoom';
 
 function App() {
   return (
     <div className="App">
-      <WriteCode />
+      <Routes>
+        <Route path={ROUTE_URL.HOME} element={<HomePage />} />
+        <Route path={ROUTE_URL.CODE_ROOM} element={<CodeRoom />} />
+      </Routes>
     </div>
   );
 }
