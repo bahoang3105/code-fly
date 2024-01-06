@@ -1,9 +1,10 @@
-import { useRef, createContext, ReactNode, useEffect, useState, useContext } from 'react';
+import { useRef, createContext, ReactNode, useEffect, useState, useContext, useCallback } from 'react';
 import { Channels, ISocketContext, WebsocketState } from '../types';
 
 const defaultContextValue: ISocketContext = {
-  subscribe: (channel: string, callback: any) => {},
-  unsubscribe: (channel: string, callback: any) => {},
+  subscribe: (_channel: string, _callback: any) => {},
+  unsubscribe: (_channel: string, _callback: any) => {},
+  send: (_event: string, _data: any) => {},
   status: WebsocketState.UNINSTANTIATED
 };
 
@@ -35,6 +36,12 @@ const WebsocketProvider = ({ url, children }: IProps) => {
     }
   };
 
+  const send = (event: string, data: any) => {
+    if (websocket.current && status === WebsocketState.OPEN) {
+      websocket.current.send(JSON.stringify({ event, data }));
+    }
+  };
+
   useEffect(() => {
     setStatus(WebsocketState.CONNECTING);
     websocket.current = new WebSocket(url);
@@ -50,7 +57,9 @@ const WebsocketProvider = ({ url, children }: IProps) => {
     };
   }, [url]);
 
-  return <WebsocketContext.Provider value={{ subscribe, unsubscribe, status }}>{children}</WebsocketContext.Provider>;
+  return (
+    <WebsocketContext.Provider value={{ subscribe, unsubscribe, status, send }}>{children}</WebsocketContext.Provider>
+  );
 };
 
 const useWebsocketContext = () => {
