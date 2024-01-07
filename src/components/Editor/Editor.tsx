@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Logoot } from '../../logoot';
+import { EventName, Logoot } from '../../logoot';
+import { useWebsocketContext } from '../../providers/WebsocketProvider';
 import './Editor.scss';
 
 export const Editor = () => {
@@ -8,6 +9,23 @@ export const Editor = () => {
   const [caretEndPos, setCaretEndPos] = useState(0);
   const [text, setText] = useState(logoot.getValue());
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const { send, subscribe, unsubscribe } = useWebsocketContext();
+
+  useEffect(() => {
+    const sendData = (data: any) => {
+      send(EventName.OPERATION, data);
+    };
+    logoot.addListener(EventName.OPERATION, sendData);
+    logoot.addListener(EventName.INSERT, handleChange);
+    logoot.addListener(EventName.DELETE, handleChange);
+    subscribe(EventName.OPERATION, logoot.receive);
+    return () => {
+      logoot.removeListener(EventName.OPERATION, sendData);
+      logoot.removeListener(EventName.INSERT, handleChange);
+      logoot.removeListener(EventName.DELETE, handleChange);
+      unsubscribe(EventName.OPERATION, logoot.receive);
+    };
+  }, [send, logoot]);
 
   useEffect(() => {
     if (textAreaRef.current) {

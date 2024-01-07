@@ -1,18 +1,31 @@
-import { randomInt } from '../utils';
+import EventEmitter from 'nanobus';
 import { Identifier } from './Identifier';
 import { LogootNode } from './LogootNode';
+import { randomInt } from '../utils';
 
 const INT_MIN = 1;
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 const BASE = Math.pow(2, 8);
 
+export enum EventName {
+  OPERATION = 'operation',
+  INSERT = 'insert',
+  DELETE = 'delete'
+}
+
 export class Logoot {
   site: string;
   clock: number;
-  private deleteQueue: Array<any>;
+  addListener: (event: string, listener: any) => EventEmitter;
+  removeListener: (event: string, listener: any) => void;
+  private eventEmitter: EventEmitter;
+  private deleteQueue: Array<Identifier[]>;
   private root: LogootNode<Identifier>;
 
   constructor(site: string, state?: any) {
+    this.eventEmitter = new EventEmitter();
+    this.addListener = this.eventEmitter.addListener.bind(this.eventEmitter);
+    this.removeListener = this.eventEmitter.removeListener.bind(this.eventEmitter);
     this.site = site;
     this.clock = 0;
     this.deleteQueue = [];
@@ -48,6 +61,7 @@ export class Logoot {
     if (!node) return;
     node.value = char;
     node.setEmpty(false);
+    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.INSERT, data: { position, char } });
   }
 
   private doubledBase(depth: number) {
@@ -96,6 +110,7 @@ export class Logoot {
     const position = node.getPath();
     node.setEmpty(true);
     node.trimEmpty();
+    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.DELETE, data: { position } });
   }
 
   getValue() {
@@ -133,6 +148,11 @@ export class Logoot {
     return new Identifier(id.int, id.site, id.clock);
   }
 
+  private arePositionEqual(a: Identifier[], b: Identifier[]) {
+    if (a.length !== b.length) return false;
+    return a.every((identify, index) => identify.compare(b[index]) === 0);
+  }
+
   setState(state: string) {
     const parsed = JSON.parse(state);
 
@@ -147,5 +167,43 @@ export class Logoot {
 
     this.root = parseNode(parsed.root, null);
     this.deleteQueue = parsed.deleteQueue;
+  }
+
+  receive(data: any) {
+    try {
+      if (data.type === EventName.INSERT) {
+        const deleteQueueIndex = this.deleteQueue.findIndex((pos) => this.arePositionEqual(pos, data.position));
+        if (deleteQueueIndex > -1) {
+          this.deleteQueue.splice(deleteQueueIndex, 1);
+          return;
+        }
+
+        const existingNode = this.root.getChildByPath(data.position, false);
+        if (existingNode) return; // this node has been already inserted, ignore this event
+
+        const node = this.root.getChildByPath(data.position, true);
+        if (node) {
+          node.value = data.char;
+          node.setEmpty(false);
+          this.eventEmitter.emit(EventName.INSERT);
+        }
+      }
+      if (data.type === EventName.DELETE) {
+        const node = this.root.getChildByPath(data.position, false);
+        if (node && !node.empty) {
+          node.setEmpty(true);
+          node.trimEmpty();
+          this.eventEmitter.emit(EventName.DELETE);
+        } else {
+          // case delete event go before insert event
+          const isExistInDeleteQueue = this.deleteQueue.some((pos) => this.arePositionEqual(pos, data.position));
+          if (!isExistInDeleteQueue) {
+            this.deleteQueue.push(data.position);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(err);
+    }
   }
 }
