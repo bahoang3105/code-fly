@@ -61,7 +61,7 @@ export class Logoot {
     if (!node) return;
     node.value = char;
     node.setEmpty(false);
-    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.INSERT, data: { position, char } });
+    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.INSERT, position, char });
   }
 
   private doubledBase(depth: number) {
@@ -110,7 +110,7 @@ export class Logoot {
     const position = node.getPath();
     node.setEmpty(true);
     node.trimEmpty();
-    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.DELETE, data: { position } });
+    this.eventEmitter.emit(EventName.OPERATION, { type: EventName.DELETE, position });
   }
 
   getValue() {
@@ -166,18 +166,22 @@ export class Logoot {
     };
 
     this.root = parseNode(parsed.root, null);
-    this.deleteQueue = parsed.deleteQueue;
+    this.deleteQueue = parsed.deleteQueue.map((id: any) => this.parseId(id));
   }
 
-  receive(data: any) {
+  receive(message: any) {
     try {
+      if (message.from) {
+        console;
+      }
+      const data = message.data;
       if (data.type === EventName.INSERT) {
+        data.position = data.position.map((id: any) => this.parseId(id));
         const deleteQueueIndex = this.deleteQueue.findIndex((pos) => this.arePositionEqual(pos, data.position));
         if (deleteQueueIndex > -1) {
           this.deleteQueue.splice(deleteQueueIndex, 1);
           return;
         }
-
         const existingNode = this.root.getChildByPath(data.position, false);
         if (existingNode) return; // this node has been already inserted, ignore this event
 
@@ -187,23 +191,25 @@ export class Logoot {
           node.setEmpty(false);
           this.eventEmitter.emit(EventName.INSERT);
         }
-      }
-      if (data.type === EventName.DELETE) {
+      } else if (data.type === EventName.DELETE) {
+        data.position = data.position.map((id: any) => this.parseId(id));
         const node = this.root.getChildByPath(data.position, false);
         if (node && !node.empty) {
           node.setEmpty(true);
           node.trimEmpty();
           this.eventEmitter.emit(EventName.DELETE);
-        } else {
+        } else if (data.position.site !== this.site) {
           // case delete event go before insert event
           const isExistInDeleteQueue = this.deleteQueue.some((pos) => this.arePositionEqual(pos, data.position));
           if (!isExistInDeleteQueue) {
             this.deleteQueue.push(data.position);
           }
         }
+      } else {
+        throw Error('Unhandler event');
       }
     } catch (err) {
-      console.warn(err);
+      console.warn('Cannot handle received event', message, err);
     }
   }
 }

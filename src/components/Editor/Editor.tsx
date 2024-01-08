@@ -15,15 +15,16 @@ export const Editor = () => {
     const sendData = (data: any) => {
       send(EventName.OPERATION, data);
     };
+    const receive = logoot.receive.bind(logoot);
     logoot.addListener(EventName.OPERATION, sendData);
     logoot.addListener(EventName.INSERT, handleChange);
     logoot.addListener(EventName.DELETE, handleChange);
-    subscribe(EventName.OPERATION, logoot.receive);
+    subscribe(EventName.OPERATION, receive);
     return () => {
       logoot.removeListener(EventName.OPERATION, sendData);
       logoot.removeListener(EventName.INSERT, handleChange);
       logoot.removeListener(EventName.DELETE, handleChange);
-      unsubscribe(EventName.OPERATION, logoot.receive);
+      unsubscribe(EventName.OPERATION, receive);
     };
   }, [send, logoot]);
 

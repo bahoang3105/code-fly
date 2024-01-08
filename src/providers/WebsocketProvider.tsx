@@ -49,7 +49,18 @@ const WebsocketProvider = ({ url, children }: IProps) => {
     websocket.current.onclose = () => setStatus(WebsocketState.CLOSED);
     websocket.current.onerror = (error) => console.warn(error);
     websocket.current.onmessage = (message: any) => {
-      console.log(message);
+      try {
+        const { event, data } = JSON.parse(message.data);
+        for (const callback of channels.current?.[event] || []) {
+          try {
+            callback(data);
+          } catch (error) {
+            console.warn('Websocket handler error in callback', callback, data);
+          }
+        }
+      } catch (error) {
+        console.warn('Websocket handler error', error);
+      }
     };
     return () => {
       setStatus(WebsocketState.CLOSING);
